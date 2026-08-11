@@ -41,17 +41,6 @@ Call `odoo_read` with:
 | `account.fiscal.year` | Fiscal years | `name`, `date_from`, `date_to` |
 | `ir.module.module` | Installed modules | `name`, `state`, `summary` |
 
-### Six convenience tools (quicker for common lookups)
-
-| Tool | Use when |
-|---|---|
-| `search_invoices` | Quick customer invoice search by name |
-| `list_vendor_bills` | Quick vendor bill search by name |
-| `list_partners` | Quick customer/vendor lookup (pass `"customer"`, `"vendor"`, or `"all"`) |
-| `list_payments` | Quick payment lookup (pass `"inbound"` or `"outbound"`) |
-| `list_journal_entries` | Recent journal lines |
-| `list_accounts` | Chart of accounts listing |
-
 ### Odoo domain syntax
 
 Domains are lists of `[field, operator, value]` triples:

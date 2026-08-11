@@ -1,6 +1,6 @@
 {
   "name": "odoo-accounting",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Odoo Accounting coworker: flexible read-only access to invoices, bills, partners, payments, journals, chart of accounts, taxes, banking, and analytic accounting through the connected tenant.",
   "author": {
     "name": "Sadeef"
@@ -9,7 +9,7 @@
   "connectors": [
     {
       "plugin_id": "odoo-accounting",
-      "plugin_version": "0.3.0",
+      "plugin_version": "0.3.1",
       "id": "odoo",
       "protocol": "jsonrpc",
       "base_url": "https://odoo.example.com",
@@ -36,117 +36,15 @@
             "required": ["model"],
             "additionalProperties": false
           }
-        },
-        {
-          "id": "search_invoices",
-          "mode": "read",
-          "method": "POST",
-          "path": "/jsonrpc",
-          "input_schema": {
-            "type": "object",
-            "properties": {
-              "query": {"type": "string", "maxLength": 100},
-              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
-            },
-            "additionalProperties": false
-          }
-        },
-        {
-          "id": "list_vendor_bills",
-          "mode": "read",
-          "method": "POST",
-          "path": "/jsonrpc",
-          "input_schema": {
-            "type": "object",
-            "properties": {
-              "query": {"type": "string", "maxLength": 100},
-              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
-            },
-            "additionalProperties": false
-          }
-        },
-        {
-          "id": "list_partners",
-          "mode": "read",
-          "method": "POST",
-          "path": "/jsonrpc",
-          "input_schema": {
-            "type": "object",
-            "properties": {
-              "query": {"type": "string", "maxLength": 100},
-              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
-            },
-            "additionalProperties": false
-          }
-        },
-        {
-          "id": "list_payments",
-          "mode": "read",
-          "method": "POST",
-          "path": "/jsonrpc",
-          "input_schema": {
-            "type": "object",
-            "properties": {
-              "query": {"type": "string", "maxLength": 100},
-              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
-            },
-            "additionalProperties": false
-          }
-        },
-        {
-          "id": "list_journal_entries",
-          "mode": "read",
-          "method": "POST",
-          "path": "/jsonrpc",
-          "input_schema": {
-            "type": "object",
-            "properties": {
-              "query": {"type": "string", "maxLength": 100},
-              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
-            },
-            "additionalProperties": false
-          }
-        },
-        {
-          "id": "list_accounts",
-          "mode": "read",
-          "method": "POST",
-          "path": "/jsonrpc",
-          "input_schema": {
-            "type": "object",
-            "properties": {
-              "query": {"type": "string", "maxLength": 100},
-              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
-            },
-            "additionalProperties": false
-          }
         }
       ],
       "bindings": [
-        {
-          "skill": "odoo-accounting",
-          "operations": ["odoo_read", "search_invoices", "list_vendor_bills", "list_partners", "list_payments", "list_journal_entries", "list_accounts"]
-        },
-        {
-          "skill": "odoo-receivables",
-          "operations": ["odoo_read", "search_invoices", "list_payments", "list_partners"]
-        },
-        {
-          "skill": "odoo-payables",
-          "operations": ["odoo_read", "list_vendor_bills", "list_payments", "list_partners"]
-        },
-        {
-          "skill": "odoo-banking",
-          "operations": ["odoo_read", "list_payments", "list_journal_entries"]
-        },
-        {
-          "skill": "odoo-reporting",
-          "operations": ["odoo_read", "list_journal_entries", "list_accounts"]
-        },
-        {
-          "skill": "odoo-discovery",
-          "operations": ["odoo_read"]
-        }
+        {"skill": "odoo-accounting", "operations": ["odoo_read"]},
+        {"skill": "odoo-receivables", "operations": ["odoo_read"]},
+        {"skill": "odoo-payables", "operations": ["odoo_read"]},
+        {"skill": "odoo-banking", "operations": ["odoo_read"]},
+        {"skill": "odoo-reporting", "operations": ["odoo_read"]},
+        {"skill": "odoo-discovery", "operations": ["odoo_read"]}
       ]
     }
   ]
