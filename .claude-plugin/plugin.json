@@ -1,0 +1,60 @@
+{
+  "name": "odoo-accounting",
+  "version": "0.1.0",
+  "description": "Read-only Odoo Accounting capabilities for Sadeef AI.",
+  "author": {
+    "name": "Sadeef"
+  },
+  "keywords": ["odoo", "accounting", "invoices", "erp"],
+  "connectors": [
+    {
+      "plugin_id": "odoo-accounting",
+      "plugin_version": "0.1.0",
+      "id": "odoo",
+      "protocol": "jsonrpc",
+      "base_url": "https://odoo.example.com",
+      "credentials": [
+        {"id": "base_url", "type": "url", "required": true},
+        {"id": "database", "type": "string", "required": true},
+        {"id": "uid", "type": "string", "required": true},
+        {"id": "api_key", "type": "secret", "required": true}
+      ],
+      "operations": [
+        {
+          "id": "search_invoices",
+          "mode": "read",
+          "method": "POST",
+          "path": "/jsonrpc",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "query": {"type": "string", "maxLength": 100},
+              "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "list_partners",
+          "mode": "read",
+          "method": "POST",
+          "path": "/jsonrpc",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "query": {"type": "string", "maxLength": 100},
+              "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+            },
+            "additionalProperties": false
+          }
+        }
+      ],
+      "bindings": [
+        {
+          "skill": "odoo-accounting",
+          "operations": ["search_invoices", "list_partners"]
+        }
+      ]
+    }
+  ]
+}
