@@ -1,15 +1,15 @@
 {
   "name": "odoo-accounting",
-  "version": "0.1.0",
-  "description": "Read-only Odoo Accounting capabilities for Sadeef AI.",
+  "version": "0.2.0",
+  "description": "Read-only Odoo Accounting capabilities for Sadeef AI: invoices, bills, customers, vendors, payments, journals, and chart of accounts.",
   "author": {
     "name": "Sadeef"
   },
-  "keywords": ["odoo", "accounting", "invoices", "erp"],
+  "keywords": ["odoo", "accounting", "invoices", "bills", "payments", "journals", "erp"],
   "connectors": [
     {
       "plugin_id": "odoo-accounting",
-      "plugin_version": "0.1.0",
+      "plugin_version": "0.2.0",
       "id": "odoo",
       "protocol": "jsonrpc",
       "base_url": "https://odoo.example.com",
@@ -35,7 +35,65 @@
           }
         },
         {
+          "id": "list_vendor_bills",
+          "mode": "read",
+          "method": "POST",
+          "path": "/jsonrpc",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "query": {"type": "string", "maxLength": 100},
+              "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+            },
+            "additionalProperties": false
+          }
+        },
+        {
           "id": "list_partners",
+          "mode": "read",
+          "method": "POST",
+          "path": "/jsonrpc",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "query": {"type": "string", "maxLength": 100},
+              "partner_type": {"type": "string", "enum": ["customer", "vendor", "all"]},
+              "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "list_payments",
+          "mode": "read",
+          "method": "POST",
+          "path": "/jsonrpc",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "query": {"type": "string", "maxLength": 100},
+              "payment_type": {"type": "string", "enum": ["inbound", "outbound", "all"]},
+              "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "list_journal_entries",
+          "mode": "read",
+          "method": "POST",
+          "path": "/jsonrpc",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "query": {"type": "string", "maxLength": 100},
+              "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "list_accounts",
           "mode": "read",
           "method": "POST",
           "path": "/jsonrpc",
@@ -52,7 +110,14 @@
       "bindings": [
         {
           "skill": "odoo-accounting",
-          "operations": ["search_invoices", "list_partners"]
+          "operations": [
+            "search_invoices",
+            "list_vendor_bills",
+            "list_partners",
+            "list_payments",
+            "list_journal_entries",
+            "list_accounts"
+          ]
         }
       ]
     }
