@@ -12,7 +12,7 @@ No invoice creation, posting, payment, update, or deletion is included.
 
 ## Authentication boundary
 
-The plugin contains no credentials. The Connection setup form collects the Odoo tenant base URL, database, user identifier/UID, and API key, then encrypts the values at the application boundary. The tenant URL is supplied at setup time; the manifest URL is only a safe HTTPS placeholder used for validation and preview.
+The plugin contains no credentials. The Connection setup form collects the Odoo tenant base URL, database, user login/email, and API key, then encrypts the values at the application boundary. Odoo's RPC API authenticates the login/email and returns the numeric UID internally; the tenant URL is supplied at setup time, while the manifest URL is only a safe HTTPS placeholder used for validation and preview.
 
 ## Repository decision pending
 

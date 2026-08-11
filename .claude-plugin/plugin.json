@@ -16,7 +16,7 @@
       "credentials": [
         {"id": "base_url", "type": "url", "required": true},
         {"id": "database", "type": "string", "required": true},
-        {"id": "uid", "type": "string", "required": true},
+        {"id": "username", "type": "string", "required": true},
         {"id": "api_key", "type": "secret", "required": true}
       ],
       "operations": [
