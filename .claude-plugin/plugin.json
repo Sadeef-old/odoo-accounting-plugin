@@ -1,15 +1,15 @@
 {
   "name": "odoo-accounting",
-  "version": "0.2.0",
-  "description": "Read-only Odoo Accounting capabilities for Sadeef AI: invoices, bills, customers, vendors, payments, journals, and chart of accounts.",
+  "version": "0.3.0",
+  "description": "Odoo Accounting coworker: flexible read-only access to invoices, bills, partners, payments, journals, chart of accounts, taxes, banking, and analytic accounting through the connected tenant.",
   "author": {
     "name": "Sadeef"
   },
-  "keywords": ["odoo", "accounting", "invoices", "bills", "payments", "journals", "erp"],
+  "keywords": ["odoo", "accounting", "invoices", "bills", "payments", "journals", "erp", "receivables", "payables", "banking", "reporting"],
   "connectors": [
     {
       "plugin_id": "odoo-accounting",
-      "plugin_version": "0.2.0",
+      "plugin_version": "0.3.0",
       "id": "odoo",
       "protocol": "jsonrpc",
       "base_url": "https://odoo.example.com",
@@ -21,6 +21,23 @@
       ],
       "operations": [
         {
+          "id": "odoo_read",
+          "mode": "read",
+          "method": "POST",
+          "path": "/jsonrpc",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "model": {"type": "string", "description": "Odoo model name from the allowlist (e.g. account.move, account.move.line, res.partner)"},
+              "domain": {"type": "array", "description": "Odoo domain filter list, e.g. [[\"move_type\",\"=\",\"out_invoice\"],[\"state\",\"=\",\"posted\"]]"},
+              "fields": {"type": "array", "description": "Fields to return (must be in the model's allowlist). Omit for all allowed fields."},
+              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
+            },
+            "required": ["model"],
+            "additionalProperties": false
+          }
+        },
+        {
           "id": "search_invoices",
           "mode": "read",
           "method": "POST",
@@ -29,7 +46,7 @@
             "type": "object",
             "properties": {
               "query": {"type": "string", "maxLength": 100},
-              "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
             },
             "additionalProperties": false
           }
@@ -43,7 +60,7 @@
             "type": "object",
             "properties": {
               "query": {"type": "string", "maxLength": 100},
-              "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
             },
             "additionalProperties": false
           }
@@ -57,8 +74,7 @@
             "type": "object",
             "properties": {
               "query": {"type": "string", "maxLength": 100},
-              "partner_type": {"type": "string", "enum": ["customer", "vendor", "all"]},
-              "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
             },
             "additionalProperties": false
           }
@@ -72,8 +88,7 @@
             "type": "object",
             "properties": {
               "query": {"type": "string", "maxLength": 100},
-              "payment_type": {"type": "string", "enum": ["inbound", "outbound", "all"]},
-              "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
             },
             "additionalProperties": false
           }
@@ -87,7 +102,7 @@
             "type": "object",
             "properties": {
               "query": {"type": "string", "maxLength": 100},
-              "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
             },
             "additionalProperties": false
           }
@@ -101,7 +116,7 @@
             "type": "object",
             "properties": {
               "query": {"type": "string", "maxLength": 100},
-              "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+              "limit": {"type": "integer", "minimum": 1, "maximum": 200}
             },
             "additionalProperties": false
           }
@@ -110,14 +125,27 @@
       "bindings": [
         {
           "skill": "odoo-accounting",
-          "operations": [
-            "search_invoices",
-            "list_vendor_bills",
-            "list_partners",
-            "list_payments",
-            "list_journal_entries",
-            "list_accounts"
-          ]
+          "operations": ["odoo_read", "search_invoices", "list_vendor_bills", "list_partners", "list_payments", "list_journal_entries", "list_accounts"]
+        },
+        {
+          "skill": "odoo-receivables",
+          "operations": ["odoo_read", "search_invoices", "list_payments", "list_partners"]
+        },
+        {
+          "skill": "odoo-payables",
+          "operations": ["odoo_read", "list_vendor_bills", "list_payments", "list_partners"]
+        },
+        {
+          "skill": "odoo-banking",
+          "operations": ["odoo_read", "list_payments", "list_journal_entries"]
+        },
+        {
+          "skill": "odoo-reporting",
+          "operations": ["odoo_read", "list_journal_entries", "list_accounts"]
+        },
+        {
+          "skill": "odoo-discovery",
+          "operations": ["odoo_read"]
         }
       ]
     }

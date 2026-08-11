@@ -1,19 +1,43 @@
-# Odoo Accounting plugin — pilot draft
+# Odoo Accounting Plugin
 
-This draft is deliberately read-only. It is intended to be imported as an approved Sadeef capability pack and configured through Extensions.
+A read-only Odoo accounting coworker plugin for Sadeef AI. Version 0.3.0.
 
-## Planned first capabilities
+## What it does
 
-- Search customer invoices
-- List customers and vendors
-- Read one invoice's bounded summary
+Connects to a live Odoo tenant and lets the AI agent answer real accounting questions: who owes us, who do we owe, cash position, trial balance, VAT position, chart of accounts, and more.
 
-No invoice creation, posting, payment, update, or deletion is included.
+## Architecture
 
-## Authentication boundary
+**One flexible read tool** (`odoo_read`) backed by a model allowlist with field-level projection. The agent can query any of 20+ Odoo accounting models with arbitrary domains, but only read — no writes, no arbitrary model access.
 
-The plugin contains no credentials. The Connection setup form collects the Odoo tenant base URL, database, user login/email, and API key, then encrypts the values at the application boundary. Odoo's RPC API authenticates the login/email and returns the numeric UID internally; the tenant URL is supplied at setup time, while the manifest URL is only a safe HTTPS placeholder used for validation and preview.
+**Six convenience tools** for quick lookups: `search_invoices`, `list_vendor_bills`, `list_partners`, `list_payments`, `list_journal_entries`, `list_accounts`.
 
-## Repository decision pending
+**Six detailed skills** that teach the agent how to be an accountant, not just a tool-caller:
 
-The external GitHub repository name has not yet been chosen. This is a local contract draft only.
+| Skill | Covers |
+|---|---|
+| `odoo-accounting` | Main skill — tool reference, domain syntax, presentation rules, all common workflows |
+| `odoo-receivables` | AR: outstanding invoices, aged receivables, customer statements, overdue tracking, payment matching |
+| `odoo-payables` | AP: outstanding bills, aged payables, vendor statements, payment status, upcoming dues |
+| `odoo-banking` | Bank accounts, cash flow, payment reconciliation, unreconciled items |
+| `odoo-reporting` | Trial balance, P&L, balance sheet, general ledger, tax/VAT report, audit trail |
+| `odoo-discovery` | Tenant config: company, country, currency, modules, journals, taxes, chart of accounts, fiscal year |
+
+## Safety
+
+- Read-only. No create, write, post, cancel, or delete.
+- Model allowlist enforced at the provider level — the agent cannot access models not on the list.
+- Field-level projection caps — only allowlisted fields are returned.
+- Result limit capped at 200 rows.
+- Credentials encrypted at the application boundary; never exposed in results.
+- All queries go through the Sadeef connector broker with binding and policy enforcement.
+
+## Connection setup
+
+The Connection setup form collects:
+- `base_url` — Odoo tenant URL (https)
+- `database` — Odoo database name
+- `username` — Odoo user login/email
+- `api_key` — Odoo API key (encrypted)
+
+No credentials are stored in the plugin.
