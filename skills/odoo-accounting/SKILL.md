@@ -52,6 +52,11 @@ Domains are lists of `[field, operator, value]` triples:
 - Multiple conditions in one domain are AND-combined
 - Use `["|", cond1, cond2]` prefix notation for OR
 
+**Critical — Odoo 18 boolean values:** Use `1` and `0`, NOT `true`/`false` or `True`/`False`.
+- WRONG: `["active", "=", true]` or `["deprecated", "=", false]`
+- RIGHT: `["active", "=", 1]` or `["active", "=", 0]`
+- The JSON `true`/`false` values cause "Domain() invalid item in domain" errors. Use integers.
+
 ### `_id` field convention
 
 Fields ending in `_id` return `[id, display_name]` pairs. Extract `[1]` for the human-readable name. Example: `partner_id: [42, "Acme Corp"]` → the partner is "Acme Corp" (id 42).

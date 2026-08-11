@@ -101,12 +101,20 @@ Tax types:
 
 ```
 odoo_read(model="account.account",
-  domain=[["deprecated","=",false]],
-  fields=["code","name","account_type","reconcile"],
+  domain=[],
+  fields=["code","name","account_type","reconcile","current_balance"],
   limit=200)
 ```
 
 This gives the full chart of accounts structure.
+
+**Important — Odoo 18 domain syntax:**
+- Booleans must use `1` and `0`, not `true`/`false` or `True`/`False`
+  - WRONG: `["active","=",true]` or `["deprecated","=",false]`
+  - RIGHT: `["active","=",1]` or `["active","=",0]`
+- The `deprecated` field does NOT exist on `account.account` in Odoo 18
+- String values in domains are fine: `["name","ilike","acme"]` or `["account_type","=","asset_cash"]`
+- The `in` operator with a list: `["account_type","in",["asset_cash","asset_current"]]` — Odoo accepts this but the list must be a Python list, not a tuple
 
 ### Fiscal year
 
