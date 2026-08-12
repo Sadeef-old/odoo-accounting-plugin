@@ -315,6 +315,12 @@ class OdooRuntime:
         if any(not isinstance(field, str) or not field or len(field) > 128 for field in requested_fields):
             return ConnectorResult(text="fields must contain valid field names.", is_error=True)
         fields = requested_fields
+        if model == "ir.model.fields":
+            relation_model = next((value for field, value in (arguments.get("domain") or []) if field == "model" and isinstance(value, str)), None)
+            if relation_model:
+                fields = list(_DISCOVERY_MODELS["ir.model.fields"])
+        elif model == "ir.model":
+            fields = list(_DISCOVERY_MODELS["ir.model"])
         domain = arguments.get("domain")
         if domain is None:
             domain = []
