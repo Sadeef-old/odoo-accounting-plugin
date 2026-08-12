@@ -19,7 +19,7 @@ The tenant's installed version and enabled modules are authoritative for models 
 1. Call `odoo_discover_models` and find the technical model name from the returned `model` field.
 2. Call `odoo_discover_fields` with that technical model name.
 3. Choose only fields returned by discovery. Custom fields such as `x_*` are expected.
-4. Call `odoo_read` with an explicit `fields` list and a bounded `limit`.
+4. Call `odoo_read` with an explicit `fields` list and a bounded `limit`. The plugin accepts tenant-valid models and fields; it does not use a static accounting allowlist.
 5. If Odoo rejects a field/domain, do not retry unchanged. Read the error, rediscover, and adapt.
 
 ## Read request discipline
