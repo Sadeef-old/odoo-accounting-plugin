@@ -6,6 +6,10 @@
     "name": "Sadeef"
   },
   "keywords": ["odoo", "accounting", "invoices", "bills", "payments", "journals", "erp", "receivables", "payables", "banking", "reporting"],
+  "runtime": {
+    "module": "sadeef_plugins.odoo_accounting.runtime",
+    "entrypoint": "PLUGIN_RUNTIME"
+  },
   "connectors": [
     {
       "plugin_id": "odoo-accounting",
