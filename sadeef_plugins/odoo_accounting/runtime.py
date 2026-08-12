@@ -208,7 +208,7 @@ class OdooRuntime:
             return ConnectorResult(text="fields must contain valid field names.", is_error=True)
         fields = requested_fields
         if model == "ir.model.fields":
-            relation_model = next((value for field, value in (arguments.get("domain") or []) if field == "model" and isinstance(value, str)), None)
+            relation_model = next((term[2] for term in (arguments.get("domain") or []) if isinstance(term, list) and len(term) == 3 and term[0] == "model" and isinstance(term[2], str)), None)
             if relation_model:
                 fields = list(_DISCOVERY_MODELS["ir.model.fields"])
         elif model == "ir.model":
