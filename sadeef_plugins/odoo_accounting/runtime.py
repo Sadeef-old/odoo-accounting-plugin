@@ -208,9 +208,13 @@ class OdooRuntime:
         args, kwargs=None,
     ) -> Any:
         """Send one execute_kw call and return the parsed result."""
-        full_args = [database, int(uid), api_key, model, method] + list(args)
-        if kwargs is not None:
-            full_args.append(kwargs)
+        full_args = [database, int(uid), api_key, model, method]
+        if method == "search_read" and kwargs is not None:
+            full_args.extend([list(args), kwargs])
+        else:
+            full_args += list(args)
+            if kwargs is not None:
+                full_args.append(kwargs)
         body = {
             "jsonrpc": "2.0",
             "method": "call",
@@ -332,7 +336,8 @@ class OdooRuntime:
                 records = await self._execute_kw(
                     client, database=database, uid=uid, api_key=api_key,
                     model=model, method="search_read",
-                    args=[domain, {"fields": fields, "limit": limit}],
+                    args=[domain],
+                    kwargs={"fields": fields, "limit": limit},
                 )
         except OdooRemoteError as exc:
             return ConnectorResult(
