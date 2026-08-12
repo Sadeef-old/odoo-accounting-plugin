@@ -55,7 +55,7 @@ Domains are lists of `[field, operator, value]` triples:
 **Critical — Odoo 18 boolean values:** Use `1` and `0`, NOT `true`/`false` or `True`/`False`.
 - WRONG: `["active", "=", true]` or `["deprecated", "=", false]`
 - RIGHT: `["active", "=", 1]` or `["active", "=", 0]`
-- The JSON `true`/`false` values cause "Domain() invalid item in domain" errors. Use integers.
+- The adapter also rejects malformed boolean domains before calling Odoo and tells you exactly how to correct them. Use integers.
 
 ### `_id` field convention
 
