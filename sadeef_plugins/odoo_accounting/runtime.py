@@ -332,8 +332,7 @@ class OdooRuntime:
                 records = await self._execute_kw(
                     client, database=database, uid=uid, api_key=api_key,
                     model=model, method="search_read",
-                    args=[domain],
-                    kwargs={"fields": fields, "limit": limit},
+                    args=[domain, {"fields": fields, "limit": limit}],
                 )
         except OdooRemoteError as exc:
             return ConnectorResult(
