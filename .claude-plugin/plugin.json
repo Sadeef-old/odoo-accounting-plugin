@@ -45,13 +45,13 @@
         }
       ],
       "bindings": [
-        {"skill": "odoo-accounting", "operations": ["odoo_read"]},
-        {"skill": "odoo-receivables", "operations": ["odoo_read"]},
-        {"skill": "odoo-payables", "operations": ["odoo_read"]},
-        {"skill": "odoo-banking", "operations": ["odoo_read"]},
-        {"skill": "odoo-reporting", "operations": ["odoo_read"]},
-        {"skill": "odoo-api-reference", "operations": ["odoo_read"]},
-        {"skill": "odoo-discovery", "operations": ["odoo_read"]}
+        {"skill": "odoo-accounting", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
+        {"skill": "odoo-receivables", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
+        {"skill": "odoo-payables", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
+        {"skill": "odoo-banking", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
+        {"skill": "odoo-reporting", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
+        {"skill": "odoo-api-reference", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
+        {"skill": "odoo-discovery", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]}
       ]
     }
   ]
