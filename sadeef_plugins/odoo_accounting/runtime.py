@@ -153,7 +153,7 @@ class OdooRuntime:
         self,
         *,
         transport: httpx.AsyncBaseTransport | None = None,
-        base_url: str = "https://odoo.example.com",
+        base_url: str = "https://sadeefcapital.odoo.com",
     ):
         parsed = urlparse(base_url)
         if parsed.scheme != "https" or not parsed.hostname:

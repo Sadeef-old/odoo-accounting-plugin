@@ -16,7 +16,7 @@
       "plugin_version": "0.3.1",
       "id": "odoo",
       "protocol": "jsonrpc",
-      "base_url": "https://odoo.example.com",
+      "base_url": "https://sadeefcapital.odoo.com",
       "credentials": [
         {"id": "base_url", "type": "url", "required": true},
         {"id": "database", "type": "string", "required": true},
