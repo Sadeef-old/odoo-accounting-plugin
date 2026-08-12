@@ -380,7 +380,10 @@ class OdooRuntime:
 
 class _PluginRuntime:
     async def call(self, operation, arguments, *, credential, **kwargs):
-        return await OdooRuntime().call(operation, arguments, credential=credential, **kwargs)
+        # The connection credential is the plugin's source of runtime configuration;
+        # never fall back to the placeholder manifest URL when a connection is bound.
+        runtime = OdooRuntime(base_url=credential.get("base_url", "https://odoo.example.com"))
+        return await runtime.call(operation, arguments, credential=credential, **kwargs)
 
     def call_sync(self, operation, arguments, credential):
         import asyncio
