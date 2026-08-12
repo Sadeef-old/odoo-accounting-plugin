@@ -68,7 +68,7 @@ _READ_ALLOWLIST: dict[str, tuple[str, ...]] = {
     ),
     # Chart of accounts and tax
     "account.account": (
-        "id", "code", "name", "account_type", "reconcile",
+        "id", "code", "name", "account_type", "reconcile", "deprecated",
         "company_id", "currency_id", "group_id", "root_id",
         "current_balance", "current_balance_closing_display",
     ),
@@ -102,7 +102,7 @@ _READ_ALLOWLIST: dict[str, tuple[str, ...]] = {
         "currency_id", "account_type",
     ),
     "res.bank": (
-        "id", "name", "bic", "country", "street", "city", "state", "zip",
+        "id", "name", "bic", "country", "street", "city", "state", "zip", "active",
     ),
     # Analytic
     "account.analytic.plan": (
