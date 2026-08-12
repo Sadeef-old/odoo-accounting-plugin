@@ -136,6 +136,11 @@ _READ_ALLOWLIST: dict[str, tuple[str, ...]] = {
 
 _SAFE_ERROR = "Odoo request failed: {detail}"
 _DOMAIN_OPERATORS = {"=", "!=", ">", ">=", "<", "<=", "in", "not in", "like", "not like", "ilike", "not ilike", "child_of", "parent_of", "=?"}
+_DISCOVERY_MODELS = {
+    "ir.model": ("id", "model", "name", "state", "modules"),
+    "ir.model.fields": ("id", "name", "field_description", "ttype", "relation", "required", "readonly", "store"),
+}
+_DISCOVERY_OPERATIONS = {"odoo_discover_models", "odoo_discover_fields", "odoo_read"}
 
 
 class OdooRemoteError(ValueError):
@@ -248,8 +253,15 @@ class OdooRuntime:
     async def call(self, operation, arguments, *, credential, approval_id=None, autonomous=False, **kwargs):
         if not isinstance(operation, ConnectorOperation):
             raise TypeError("plugin call requires a declared connector operation")
-        if operation.id != "odoo_read" or operation.mode != "read":
+        if operation.id not in _DISCOVERY_OPERATIONS or operation.mode != "read":
             return ConnectorResult(text="Odoo operation is not available.", is_error=True)
+        if operation.id == "odoo_discover_models":
+            arguments = {**arguments, "model": "ir.model", "fields": list(_DISCOVERY_MODELS["ir.model"])}
+        elif operation.id == "odoo_discover_fields":
+            model = arguments.get("model")
+            if not isinstance(model, str) or not model:
+                return ConnectorResult(text="odoo_discover_fields requires a model name.", is_error=True)
+            arguments = {**arguments, "model": "ir.model.fields", "domain": [["model", "=", model]], "fields": list(_DISCOVERY_MODELS["ir.model.fields"])}
         return await self._call_operation(
             operation,
             arguments,
@@ -278,7 +290,7 @@ class OdooRuntime:
             return ConnectorResult(text="Accounting changes cannot run unattended.", is_error=True)
         if operation.path != "/jsonrpc" or operation.method != "POST":
             return ConnectorResult(text="Odoo operation is not available.", is_error=True)
-        if operation.id != "odoo_read":
+        if operation.id not in _DISCOVERY_OPERATIONS:
             return ConnectorResult(text="Odoo operation is not available.", is_error=True)
 
         return await self._odoo_read(operation, arguments, credential=credential)
@@ -295,26 +307,14 @@ class OdooRuntime:
         credential: dict[str, str],
     ) -> ConnectorResult:
         model = arguments.get("model")
-        if not isinstance(model, str) or model not in _READ_ALLOWLIST:
-            allowed = sorted(_READ_ALLOWLIST)
-            return ConnectorResult(
-                text=f"Model {model!r} is not allowlisted for read access. "
-                     f"Allowed models: {', '.join(allowed)}",
-                is_error=True,
-            )
-        allowed_fields = _READ_ALLOWLIST[model]
+        if not isinstance(model, str) or not model or len(model) > 128 or "." not in model:
+            return ConnectorResult(text="A valid Odoo technical model name is required.", is_error=True)
         requested_fields = arguments.get("fields")
         if not isinstance(requested_fields, list) or not requested_fields:
-            fields = list(allowed_fields)
-        else:
-            invalid = [f for f in requested_fields if f not in allowed_fields]
-            if invalid:
-                return ConnectorResult(
-                    text=f"Fields not allowed on {model}: {', '.join(invalid)}. "
-                         f"Allowed fields: {', '.join(allowed_fields)}",
-                    is_error=True,
-                )
-            fields = requested_fields
+            return ConnectorResult(text="fields is required; discover the model fields first.", is_error=True)
+        if any(not isinstance(field, str) or not field or len(field) > 128 for field in requested_fields):
+            return ConnectorResult(text="fields must contain valid field names.", is_error=True)
+        fields = requested_fields
         domain = arguments.get("domain")
         if domain is None:
             domain = []

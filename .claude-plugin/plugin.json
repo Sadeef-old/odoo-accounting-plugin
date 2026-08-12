@@ -24,6 +24,8 @@
         {"id": "api_key", "type": "secret", "required": true}
       ],
       "operations": [
+        {"id": "odoo_discover_models", "mode": "read", "method": "POST", "path": "/jsonrpc", "input_schema": {"type": "object"}},
+        {"id": "odoo_discover_fields", "mode": "read", "method": "POST", "path": "/jsonrpc", "input_schema": {"type": "object", "properties": {"model": {"type": "string"}}, "required": ["model"]}},
         {
           "id": "odoo_read",
           "mode": "read",
@@ -32,12 +34,12 @@
           "input_schema": {
             "type": "object",
             "properties": {
-              "model": {"type": "string", "description": "Odoo model name from the allowlist (e.g. account.move, account.move.line, res.partner)"},
-              "domain": {"type": "array", "description": "Odoo domain filter list, e.g. [[\"move_type\",\"=\",\"out_invoice\"],[\"state\",\"=\",\"posted\"]]"},
-              "fields": {"type": "array", "description": "Fields to return (must be in the model's allowlist). Omit for all allowed fields."},
+              "model": {"type": "string", "description": "Technical Odoo model name discovered from the tenant"},
+              "domain": {"type": "array", "description": "Odoo domain filter list"},
+              "fields": {"type": "array", "description": "Explicit fields discovered for the model"},
               "limit": {"type": "integer", "minimum": 1, "maximum": 200}
             },
-            "required": ["model"],
+            "required": ["model", "fields"],
             "additionalProperties": false
           }
         }
@@ -48,6 +50,7 @@
         {"skill": "odoo-payables", "operations": ["odoo_read"]},
         {"skill": "odoo-banking", "operations": ["odoo_read"]},
         {"skill": "odoo-reporting", "operations": ["odoo_read"]},
+        {"skill": "odoo-api-reference", "operations": ["odoo_read"]},
         {"skill": "odoo-discovery", "operations": ["odoo_read"]}
       ]
     }
