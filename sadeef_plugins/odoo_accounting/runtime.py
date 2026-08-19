@@ -33,6 +33,24 @@ _DISCOVERY_MODELS = {
     "ir.model.fields": ("id", "name", "field_description", "ttype", "relation", "required", "readonly", "store"),
 }
 _DISCOVERY_OPERATIONS = {"odoo_discover_models", "odoo_discover_fields", "odoo_read"}
+_WRITE_OPERATIONS = {"odoo_create", "odoo_write", "odoo_action"}
+_ALL_OPERATIONS = _DISCOVERY_OPERATIONS | _WRITE_OPERATIONS
+_WRITE_ALLOWED_MODELS = {
+    "account.move",
+    "account.move.line",
+    "account.payment",
+    "res.partner",
+    "account.bank.statement.line",
+    "account.analytic.line",
+}
+_ALLOWED_ACTIONS = {
+    "action_post",
+    "action_draft",
+    "button_draft",
+    "action_register_payment",
+    "action_cancel",
+    "action_validate",
+}
 
 
 class OdooRemoteError(ValueError):
@@ -145,8 +163,13 @@ class OdooRuntime:
     async def call(self, operation, arguments, *, credential, approval_id=None, autonomous=False, **kwargs):
         if not isinstance(operation, ConnectorOperation):
             raise TypeError("plugin call requires a declared connector operation")
-        if operation.id not in _DISCOVERY_OPERATIONS or operation.mode != "read":
+        if operation.id not in _ALL_OPERATIONS:
             return ConnectorResult(text="Odoo operation is not available.", is_error=True)
+        if operation.id in _DISCOVERY_OPERATIONS and operation.mode != "read":
+            return ConnectorResult(text="Odoo operation is not available.", is_error=True)
+        if operation.id in _WRITE_OPERATIONS and operation.mode != "write":
+            return ConnectorResult(text="Odoo operation is not available.", is_error=True)
+
         if operation.id == "odoo_discover_models":
             arguments = {**arguments, "model": "ir.model", "fields": list(_DISCOVERY_MODELS["ir.model"])}
         elif operation.id == "odoo_discover_fields":
@@ -182,10 +205,147 @@ class OdooRuntime:
             return ConnectorResult(text="Accounting changes cannot run unattended.", is_error=True)
         if operation.path != "/jsonrpc" or operation.method != "POST":
             return ConnectorResult(text="Odoo operation is not available.", is_error=True)
-        if operation.id not in _DISCOVERY_OPERATIONS:
-            return ConnectorResult(text="Odoo operation is not available.", is_error=True)
 
-        return await self._odoo_read(operation, arguments, credential=credential)
+        if operation.id in _DISCOVERY_OPERATIONS:
+            return await self._odoo_read(operation, arguments, credential=credential)
+        elif operation.id == "odoo_create":
+            return await self._odoo_create(operation, arguments, credential=credential)
+        elif operation.id == "odoo_write":
+            return await self._odoo_write(operation, arguments, credential=credential)
+        elif operation.id == "odoo_action":
+            return await self._odoo_action(operation, arguments, credential=credential)
+
+        return ConnectorResult(text="Odoo operation is not available.", is_error=True)
+
+    # ------------------------------------------------------------------
+    # Mutation operations (Guarded)
+    # ------------------------------------------------------------------
+
+    async def _odoo_create(
+        self,
+        operation: ConnectorOperation,
+        arguments: dict[str, Any],
+        *,
+        credential: dict[str, str],
+    ) -> ConnectorResult:
+        model = arguments.get("model")
+        values = arguments.get("values")
+        if not isinstance(model, str) or model not in _WRITE_ALLOWED_MODELS:
+            return ConnectorResult(
+                text=f"Model {model!r} is not permitted for record creation. Permitted models: {', '.join(sorted(_WRITE_ALLOWED_MODELS))}",
+                is_error=True,
+            )
+        if not isinstance(values, dict) or not values:
+            return ConnectorResult(text="Record creation requires a non-empty values dictionary.", is_error=True)
+
+        try:
+            async with httpx.AsyncClient(transport=self.transport, timeout=10.0) as client:
+                uid = await self._authenticate(client, credential)
+                if uid is None:
+                    return ConnectorResult(text="Odoo authentication failed.", is_error=True)
+                database = credential.get("database")
+                api_key = credential.get("api_key")
+                new_id = await self._execute_kw(
+                    client,
+                    database=database,
+                    uid=uid,
+                    api_key=api_key,
+                    model=model,
+                    method="create",
+                    args=[values],
+                )
+                return ConnectorResult(text=json.dumps({"success": True, "model": model, "id": new_id}))
+        except OdooRemoteError as exc:
+            return ConnectorResult(text=f"Odoo request failed: {exc.odoo_message}", is_error=True)
+        except Exception as exc:
+            return ConnectorResult(text=f"Odoo request failed: {exc}", is_error=True)
+
+    async def _odoo_write(
+        self,
+        operation: ConnectorOperation,
+        arguments: dict[str, Any],
+        *,
+        credential: dict[str, str],
+    ) -> ConnectorResult:
+        model = arguments.get("model")
+        record_id = arguments.get("id")
+        values = arguments.get("values")
+        if not isinstance(model, str) or model not in _WRITE_ALLOWED_MODELS:
+            return ConnectorResult(
+                text=f"Model {model!r} is not permitted for record updates. Permitted models: {', '.join(sorted(_WRITE_ALLOWED_MODELS))}",
+                is_error=True,
+            )
+        if not isinstance(record_id, int) or isinstance(record_id, bool) or record_id <= 0:
+            return ConnectorResult(text="Record update requires a positive integer record ID.", is_error=True)
+        if not isinstance(values, dict) or not values:
+            return ConnectorResult(text="Record update requires a non-empty values dictionary.", is_error=True)
+
+        try:
+            async with httpx.AsyncClient(transport=self.transport, timeout=10.0) as client:
+                uid = await self._authenticate(client, credential)
+                if uid is None:
+                    return ConnectorResult(text="Odoo authentication failed.", is_error=True)
+                database = credential.get("database")
+                api_key = credential.get("api_key")
+                updated = await self._execute_kw(
+                    client,
+                    database=database,
+                    uid=uid,
+                    api_key=api_key,
+                    model=model,
+                    method="write",
+                    args=[[record_id], values],
+                )
+                return ConnectorResult(text=json.dumps({"success": bool(updated), "model": model, "id": record_id}))
+        except OdooRemoteError as exc:
+            return ConnectorResult(text=f"Odoo request failed: {exc.odoo_message}", is_error=True)
+        except Exception as exc:
+            return ConnectorResult(text=f"Odoo request failed: {exc}", is_error=True)
+
+    async def _odoo_action(
+        self,
+        operation: ConnectorOperation,
+        arguments: dict[str, Any],
+        *,
+        credential: dict[str, str],
+    ) -> ConnectorResult:
+        model = arguments.get("model")
+        action = arguments.get("action")
+        ids = arguments.get("ids")
+        if not isinstance(model, str) or model not in _WRITE_ALLOWED_MODELS:
+            return ConnectorResult(
+                text=f"Model {model!r} is not permitted for action execution.",
+                is_error=True,
+            )
+        if not isinstance(action, str) or action not in _ALLOWED_ACTIONS:
+            return ConnectorResult(
+                text=f"Action {action!r} is not permitted. Permitted actions: {', '.join(sorted(_ALLOWED_ACTIONS))}",
+                is_error=True,
+            )
+        if not isinstance(ids, list) or not ids or any(not isinstance(i, int) or isinstance(i, bool) or i <= 0 for i in ids):
+            return ConnectorResult(text="Action execution requires a non-empty list of positive integer IDs.", is_error=True)
+
+        try:
+            async with httpx.AsyncClient(transport=self.transport, timeout=10.0) as client:
+                uid = await self._authenticate(client, credential)
+                if uid is None:
+                    return ConnectorResult(text="Odoo authentication failed.", is_error=True)
+                database = credential.get("database")
+                api_key = credential.get("api_key")
+                res = await self._execute_kw(
+                    client,
+                    database=database,
+                    uid=uid,
+                    api_key=api_key,
+                    model=model,
+                    method=action,
+                    args=[ids],
+                )
+                return ConnectorResult(text=json.dumps({"success": True, "model": model, "action": action, "result": res}))
+        except OdooRemoteError as exc:
+            return ConnectorResult(text=f"Odoo request failed: {exc.odoo_message}", is_error=True)
+        except Exception as exc:
+            return ConnectorResult(text=f"Odoo request failed: {exc}", is_error=True)
 
     # ------------------------------------------------------------------
     # Flexible read

@@ -42,15 +42,72 @@
             "required": ["model", "fields"],
             "additionalProperties": false
           }
+        },
+        {
+          "id": "odoo_create",
+          "mode": "write",
+          "method": "POST",
+          "path": "/jsonrpc",
+          "request_capability": "request_accounting_write",
+          "approval_capability": "approve_accounting_write",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "model": {"type": "string", "description": "Permitted technical Odoo model name"},
+              "values": {"type": "object", "description": "Dictionary of fields to populate"}
+            },
+            "required": ["model", "values"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "odoo_write",
+          "mode": "write",
+          "method": "POST",
+          "path": "/jsonrpc",
+          "request_capability": "request_accounting_write",
+          "approval_capability": "approve_accounting_write",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "model": {"type": "string", "description": "Permitted technical Odoo model name"},
+              "id": {"type": "integer", "description": "Record ID to update"},
+              "values": {"type": "object", "description": "Dictionary of fields to update"}
+            },
+            "required": ["model", "id", "values"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "odoo_action",
+          "mode": "write",
+          "method": "POST",
+          "path": "/jsonrpc",
+          "request_capability": "request_accounting_write",
+          "approval_capability": "approve_accounting_write",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "model": {"type": "string", "description": "Permitted technical Odoo model name"},
+              "action": {"type": "string", "description": "Permitted action method name"},
+              "ids": {"type": "array", "description": "List of record IDs"}
+            },
+            "required": ["model", "action", "ids"],
+            "additionalProperties": false
+          }
         }
       ],
       "bindings": [
-        {"skill": "odoo-accounting", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
-        {"skill": "odoo-receivables", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
-        {"skill": "odoo-payables", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
-        {"skill": "odoo-banking", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
+        {"skill": "odoo-accounting", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read", "odoo_create", "odoo_write", "odoo_action"]},
+        {"skill": "odoo-receivables", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read", "odoo_create", "odoo_write", "odoo_action"]},
+        {"skill": "odoo-payables", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read", "odoo_create", "odoo_write", "odoo_action"]},
+        {"skill": "odoo-banking", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read", "odoo_create", "odoo_write", "odoo_action"]},
         {"skill": "odoo-reporting", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
-        {"skill": "odoo-api-reference", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
+        {"skill": "odoo-financial-analysis", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]},
+        {"skill": "odoo-tax-compliance", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read", "odoo_create", "odoo_write", "odoo_action"]},
+        {"skill": "odoo-reconciliation", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read", "odoo_create", "odoo_write", "odoo_action"]},
+        {"skill": "odoo-journal-entries", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read", "odoo_create", "odoo_write", "odoo_action"]},
+        {"skill": "odoo-api-reference", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read", "odoo_create", "odoo_write", "odoo_action"]},
         {"skill": "odoo-discovery", "operations": ["odoo_discover_models", "odoo_discover_fields", "odoo_read"]}
       ]
     }

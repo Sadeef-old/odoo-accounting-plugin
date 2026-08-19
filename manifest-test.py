@@ -19,15 +19,16 @@ assert len(manifest.connectors) == 1
 connector = parse_connector_manifest(manifest.connectors[0])
 assert connector.id == "odoo"
 assert {operation.id for operation in connector.operations} == {
-    "search_invoices",
-    "list_vendor_bills",
-    "list_partners",
-    "list_payments",
-    "list_journal_entries",
-    "list_accounts",
+    "odoo_discover_models",
+    "odoo_discover_fields",
+    "odoo_read",
+    "odoo_create",
+    "odoo_write",
+    "odoo_action",
 }
-assert all(operation.mode == "read" for operation in connector.operations)
-assert connector.is_bound("odoo-accounting", "search_invoices")
-assert connector.is_bound("odoo-accounting", "list_accounts")
+assert connector.is_bound("odoo-accounting", "odoo_read")
+assert connector.is_bound("odoo-accounting", "odoo_create")
+assert connector.is_bound("odoo-financial-analysis", "odoo_read")
+assert connector.is_bound("odoo-tax-compliance", "odoo_write")
 assert {field.id for field in connector.credentials} == {"base_url", "database", "username", "api_key"}
 print("manifest and connector definition: OK")
