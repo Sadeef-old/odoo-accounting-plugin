@@ -16,6 +16,8 @@ The tenant's installed version and enabled modules are authoritative for models 
 
 ## Discovery-first sequence
 
+The runtime uses Odoo JSON-2 as the primary transport (`POST /json/2/<model>/<method>`) and falls back to legacy JSON-RPC `execute_kw` when the tenant does not expose JSON-2. The standard read method is `search_read`; use it with an explicit domain, discovered fields, and a bounded limit.
+
 1. Call `odoo_discover_models` and find the technical model name from the returned `model` field.
 2. Call `odoo_discover_fields` with that technical model name.
 3. Choose only fields returned by discovery. Custom fields such as `x_*` are expected.

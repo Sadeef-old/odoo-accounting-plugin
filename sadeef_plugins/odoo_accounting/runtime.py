@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import json
+from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin, urlparse
 
 import httpx
-
-from dataclasses import dataclass
 
 @dataclass
 class ConnectorOperation:
@@ -62,26 +62,44 @@ class OdooRemoteError(ValueError):
 
 
 class OdooRuntime:
-    """Read-only Odoo JSON-RPC adapter with flexible model-level read access."""
+    """Odoo JSON-2-first adapter with a bounded JSON-RPC compatibility fallback."""
 
     def __init__(
         self,
         *,
         transport: httpx.AsyncBaseTransport | None = None,
         base_url: str = "https://sadeefcapital.odoo.com",
+        protocol: str = "json2",
     ):
         parsed = urlparse(base_url)
         if parsed.scheme != "https" or not parsed.hostname:
             raise ValueError("Odoo base_url must be an https URL")
+        if protocol not in {"json2", "jsonrpc", "auto"}:
+            raise ValueError("Odoo protocol must be json2, jsonrpc, or auto")
         self.transport = transport
         self.base_url = base_url.rstrip("/") + "/"
+        self.protocol = protocol
+
+    def _json2_url(self, model: str, method: str) -> str:
+        return urljoin(self.base_url, f"json/2/{model}/{method}")
+
+    def _headers(self, credential: dict[str, str]) -> dict[str, str]:
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": f"bearer {credential.get('api_key', '')}",
+        }
+        database = credential.get("database")
+        if database:
+            headers["X-Odoo-Database"] = database
+        return headers
 
     # ------------------------------------------------------------------
     # Authentication
     # ------------------------------------------------------------------
 
     async def _authenticate(self, client, credential) -> int | None:
-        """Resolve a numeric Odoo uid, authenticating by username when needed."""
+        """Resolve a numeric legacy uid only when the JSON-RPC fallback needs it."""
         database = credential.get("database")
         api_key = credential.get("api_key")
         uid = credential.get("uid")
@@ -118,6 +136,67 @@ class OdooRuntime:
             return uid
         return None
 
+    @staticmethod
+    def _is_json2_fallback_response(response: httpx.Response) -> bool:
+        return response.status_code in {404, 405, 415, 501}
+
+    async def _execute_json2(
+        self, client, *, credential, model: str, method: str, args: list[Any], kwargs: dict[str, Any] | None = None
+    ) -> Any:
+        body: dict[str, Any] = {}
+        if method == "search_read":
+            body = {"domain": args[0] if args else [], **(kwargs or {})}
+        elif method == "create":
+            body = {"vals": args[0] if args else {}}
+        elif method == "write":
+            body = {"ids": args[0] if args else [], "vals": args[1] if len(args) > 1 else {}}
+        elif method == "fields_get":
+            body = kwargs or {}
+        elif args:
+            body = {"ids": args[0]} if len(args) == 1 else {"ids": args[0], "params": args[1:]}
+        body.setdefault("context", {})
+        response = await client.post(
+            self._json2_url(model, method),
+            json=body,
+            headers=self._headers(credential),
+        )
+        if self._is_json2_fallback_response(response):
+            raise httpx.HTTPStatusError("JSON-2 endpoint unavailable", request=response.request, response=response)
+        response.raise_for_status()
+        payload = response.json()
+        if isinstance(payload, dict) and payload.get("error"):
+            error = payload["error"]
+            message = error.get("message") if isinstance(error, dict) else str(error)
+            raise OdooRemoteError(message or str(error))
+        if isinstance(payload, dict):
+            return payload.get("result", payload)
+        return payload
+
+    async def _execute(
+        self, client, *, credential, model: str, method: str, args: list[Any], kwargs: dict[str, Any] | None = None
+    ) -> Any:
+        if self.protocol in {"json2", "auto"}:
+            try:
+                return await self._execute_json2(
+                    client, credential=credential, model=model, method=method, args=args, kwargs=kwargs
+                )
+            except httpx.HTTPStatusError as exc:
+                if self.protocol == "json2" and not self._is_json2_fallback_response(exc.response):
+                    raise
+        uid = await self._authenticate(client, credential)
+        if uid is None:
+            raise OdooRemoteError("Odoo authentication failed: JSON-RPC requires uid or username")
+        return await self._execute_kw(
+            client,
+            database=credential.get("database"),
+            uid=uid,
+            api_key=credential.get("api_key"),
+            model=model,
+            method=method,
+            args=args,
+            kwargs=kwargs,
+        )
+
     async def _execute_kw(
         self, client, *, database, uid, api_key, model, method,
         args, kwargs=None,
@@ -143,7 +222,7 @@ class OdooRuntime:
         response = await client.post(
             urljoin(self.base_url, "jsonrpc"),
             json=body,
-            headers={"Accept": "application/json"},
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
         )
         response.raise_for_status()
         payload = response.json()
@@ -203,7 +282,7 @@ class OdooRuntime:
             return ConnectorResult(text="This accounting change requires human approval first.", is_error=True)
         if operation.mode == "write" and autonomous:
             return ConnectorResult(text="Accounting changes cannot run unattended.", is_error=True)
-        if operation.path != "/jsonrpc" or operation.method != "POST":
+        if operation.method != "POST" or operation.path not in {"/jsonrpc", "/json/2"}:
             return ConnectorResult(text="Odoo operation is not available.", is_error=True)
 
         if operation.id in _DISCOVERY_OPERATIONS:
@@ -240,16 +319,9 @@ class OdooRuntime:
 
         try:
             async with httpx.AsyncClient(transport=self.transport, timeout=10.0) as client:
-                uid = await self._authenticate(client, credential)
-                if uid is None:
-                    return ConnectorResult(text="Odoo authentication failed.", is_error=True)
-                database = credential.get("database")
-                api_key = credential.get("api_key")
-                new_id = await self._execute_kw(
+                new_id = await self._execute(
                     client,
-                    database=database,
-                    uid=uid,
-                    api_key=api_key,
+                    credential=credential,
                     model=model,
                     method="create",
                     args=[values],
@@ -282,16 +354,9 @@ class OdooRuntime:
 
         try:
             async with httpx.AsyncClient(transport=self.transport, timeout=10.0) as client:
-                uid = await self._authenticate(client, credential)
-                if uid is None:
-                    return ConnectorResult(text="Odoo authentication failed.", is_error=True)
-                database = credential.get("database")
-                api_key = credential.get("api_key")
-                updated = await self._execute_kw(
+                updated = await self._execute(
                     client,
-                    database=database,
-                    uid=uid,
-                    api_key=api_key,
+                    credential=credential,
                     model=model,
                     method="write",
                     args=[[record_id], values],
@@ -327,16 +392,9 @@ class OdooRuntime:
 
         try:
             async with httpx.AsyncClient(transport=self.transport, timeout=10.0) as client:
-                uid = await self._authenticate(client, credential)
-                if uid is None:
-                    return ConnectorResult(text="Odoo authentication failed.", is_error=True)
-                database = credential.get("database")
-                api_key = credential.get("api_key")
-                res = await self._execute_kw(
+                res = await self._execute(
                     client,
-                    database=database,
-                    uid=uid,
-                    api_key=api_key,
+                    credential=credential,
                     model=model,
                     method=action,
                     args=[ids],
@@ -386,14 +444,11 @@ class OdooRuntime:
 
         try:
             async with httpx.AsyncClient(transport=self.transport, timeout=10.0) as client:
-                uid = await self._authenticate(client, credential)
-                if uid is None:
-                    return ConnectorResult(text="Odoo authentication failed.", is_error=True)
-                database = credential.get("database")
-                api_key = credential.get("api_key")
-                records = await self._execute_kw(
-                    client, database=database, uid=uid, api_key=api_key,
-                    model=model, method="search_read",
+                records = await self._execute(
+                    client,
+                    credential=credential,
+                    model=model,
+                    method="search_read",
                     args=[domain],
                     kwargs={"fields": fields, "limit": limit},
                 )
@@ -441,15 +496,32 @@ class OdooRuntime:
 
 
 class _PluginRuntime:
-    async def call(self, operation, arguments, *, credential, **kwargs):
+    async def call(self, operation, arguments, *, credential, approval_id=None, autonomous=False, **kwargs):
         # The connection credential is the plugin's source of runtime configuration;
         # never fall back to the placeholder manifest URL when a connection is bound.
-        runtime = OdooRuntime(base_url=credential.get("base_url", "https://odoo.example.com"))
-        return await runtime.call(operation, arguments, credential=credential, **kwargs)
+        runtime = OdooRuntime(
+            base_url=credential.get("base_url", "https://odoo.example.com"),
+            protocol=credential.get("protocol", "json2"),
+        )
+        return await runtime.call(
+            operation,
+            arguments,
+            credential=credential,
+            approval_id=approval_id,
+            autonomous=autonomous,
+            **kwargs,
+        )
 
-    def call_sync(self, operation, arguments, credential):
-        import asyncio
-        result = asyncio.run(self.call(operation, arguments, credential=credential))
+    def call_sync(self, operation, arguments, credential, *, approval_id=None, autonomous=False):
+        result = asyncio.run(
+            self.call(
+                operation,
+                arguments,
+                credential=credential,
+                approval_id=approval_id,
+                autonomous=autonomous,
+            )
+        )
         return {"text": result.text, "is_error": result.is_error}
 
 PLUGIN_RUNTIME = _PluginRuntime()

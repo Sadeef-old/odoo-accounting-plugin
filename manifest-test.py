@@ -18,6 +18,7 @@ assert manifest.name == "odoo-accounting"
 assert len(manifest.connectors) == 1
 connector = parse_connector_manifest(manifest.connectors[0])
 assert connector.id == "odoo"
+assert connector.protocol == "json2"
 assert {operation.id for operation in connector.operations} == {
     "odoo_discover_models",
     "odoo_discover_fields",
@@ -26,9 +27,10 @@ assert {operation.id for operation in connector.operations} == {
     "odoo_write",
     "odoo_action",
 }
+assert all(operation.path == "/json/2" for operation in connector.operations)
 assert connector.is_bound("odoo-accounting", "odoo_read")
 assert connector.is_bound("odoo-accounting", "odoo_create")
 assert connector.is_bound("odoo-financial-analysis", "odoo_read")
 assert connector.is_bound("odoo-tax-compliance", "odoo_write")
-assert {field.id for field in connector.credentials} == {"base_url", "database", "username", "api_key"}
+assert {field.id for field in connector.credentials} == {"base_url", "database", "username", "api_key", "protocol"}
 print("manifest and connector definition: OK")
